@@ -3,28 +3,47 @@ package ansi
 import (
 	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-// TemplateFuncMap contains a few useful template helpers.
 var (
-	TemplateFuncMap = template.FuncMap{
-		"Left": func(values ...interface{}) string {
-			s := values[0].(string)
-			n := values[1].(int)
-			if n > len(s) {
-				n = len(s)
-			}
+	regexpCache   = make(map[string]*regexp.Regexp)
+	regexpCacheMu sync.RWMutex
+)
 
-			return s[:n]
-		},
-		"Matches": func(values ...interface{}) bool {
-			ok, _ := regexp.MatchString(values[1].(string), values[0].(string))
-			return ok
-		},
+// TemplateFuncMap contains a few useful template helpers.
+var TemplateFuncMap = template.FuncMap{
+	"Left": func(values ...interface{}) string {
+		s := values[0].(string)
+		n := values[1].(int)
+		if n > len(s) {
+			n = len(s)
+		}
+
+		return s[:n]
+	},
+	"Matches": func(values ...interface{}) bool {
+		pattern := values[1].(string)
+		regexpCacheMu.RLock()
+		re, ok := regexpCache[pattern]
+		regexpCacheMu.RUnlock()
+		if !ok {
+			re, _ = regexp.Compile(pattern)
+			if re != nil {
+				regexpCacheMu.Lock()
+				regexpCache[pattern] = re
+				regexpCacheMu.Unlock()
+			}
+		}
+		if re == nil {
+			return false
+		}
+		return re.MatchString(values[0].(string))
+	},
 		"Mid": func(values ...interface{}) string {
 			s := values[0].(string)
 			l := values[1].(int)
@@ -83,4 +102,3 @@ var (
 		"TrimSpace":    strings.TrimSpace,
 		"TrimSuffix":   strings.TrimSuffix,
 	}
-)

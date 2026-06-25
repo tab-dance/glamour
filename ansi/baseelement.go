@@ -25,6 +25,10 @@ type BaseElement struct {
 var (
 	templateCache   = make(map[string]*template.Template)
 	templateCacheMu sync.RWMutex
+
+	upperCaser = cases.Upper(language.English)
+	lowerCaser = cases.Lower(language.English)
+	titleCaser = cases.Title(language.English)
 )
 
 func formatToken(format string, token string) (string, error) {
@@ -61,13 +65,13 @@ func renderText(w io.Writer, rules StylePrimitive, s string) (int, error) { //no
 	// strings. Needs further investigation.
 	style := ansi.Style{}
 	if rules.Upper != nil && *rules.Upper {
-		s = cases.Upper(language.English).String(s)
+		s = upperCaser.String(s)
 	}
 	if rules.Lower != nil && *rules.Lower {
-		s = cases.Lower(language.English).String(s)
+		s = lowerCaser.String(s)
 	}
 	if rules.Title != nil && *rules.Title {
-		s = cases.Title(language.English).String(s)
+		s = titleCaser.String(s)
 	}
 	if rules.Color != nil {
 		style = style.ForegroundColor(lipgloss.Color(*rules.Color))
@@ -145,7 +149,10 @@ func (e *BaseElement) doRender(w io.Writer, st1, st2 StylePrimitive) error {
 			return err
 		}
 	}
-	_, _ = renderText(w, st2, escapeReplacer.Replace(s))
+	if strings.Contains(s, "\\") {
+		s = escapeReplacer.Replace(s)
+	}
+	_, _ = renderText(w, st2, s)
 	return nil
 }
 
