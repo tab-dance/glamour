@@ -46,11 +46,11 @@ func (e *TableElement) printTableLinks(ctx RenderContext) {
 
 		switch link.linkType {
 		case linkTypeAuto, linkTypeRegular:
-			token += fmt.Sprintf("[%d]: %s", position, link.content)
+			token += "[" + strconv.Itoa(position) + "]: " + link.content
 		case linkTypeImage:
 			token += link.content
 			style = ctx.options.Styles.ImageText
-			style.Prefix = fmt.Sprintf("[%d]: %s", position, style.Prefix)
+			style.Prefix = "[" + strconv.Itoa(position) + "]: " + style.Prefix
 		}
 
 		var b bytes.Buffer
@@ -230,5 +230,5 @@ func linkWithSuffix(tl tableLink, list []tableLink) string {
 	if index == -1 {
 		return tl.content
 	}
-	return fmt.Sprintf("%s[%d]", tl.content, index+1)
+	return tl.content + "[" + strconv.Itoa(index+1) + "]"
 }

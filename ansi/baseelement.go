@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"text/template"
 
 	"charm.land/lipgloss/v2"
@@ -21,19 +22,33 @@ type BaseElement struct {
 	Style  StylePrimitive
 }
 
+var (
+	templateCache   = make(map[string]*template.Template)
+	templateCacheMu sync.RWMutex
+)
+
 func formatToken(format string, token string) (string, error) {
-	var b bytes.Buffer
+	templateCacheMu.RLock()
+	tmpl, ok := templateCache[format]
+	templateCacheMu.RUnlock()
 
-	v := make(map[string]interface{})
-	v["text"] = token
-
-	tmpl, err := template.New(format).Funcs(TemplateFuncMap).Parse(format)
-	if err != nil {
-		return "", fmt.Errorf("glamour: error parsing template: %w", err)
+	if !ok {
+		var err error
+		tmpl, err = template.New(format).Funcs(TemplateFuncMap).Parse(format)
+		if err != nil {
+			return "", fmt.Errorf("glamour: error parsing template: %w", err)
+		}
+		templateCacheMu.Lock()
+		templateCache[format] = tmpl
+		templateCacheMu.Unlock()
 	}
 
-	err = tmpl.Execute(&b, v)
-	return b.String(), err
+	var b bytes.Buffer
+	v := map[string]any{"text": token}
+	if err := tmpl.Execute(&b, v); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 func renderText(w io.Writer, rules StylePrimitive, s string) (int, error) { //nolint:unparam

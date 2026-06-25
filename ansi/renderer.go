@@ -137,14 +137,17 @@ func (r *ANSIRenderer) renderNode(w util.BufWriter, source []byte, node ast.Node
 }
 
 func isChild(node ast.Node) bool {
-	for n := node.Parent(); n != nil; n = n.Parent() {
-		// These types are already rendered by their parent
-		switch n.Kind() {
-		case ast.KindCodeSpan, ast.KindAutoLink, ast.KindLink, ast.KindImage, ast.KindEmphasis, astext.KindStrikethrough, astext.KindTableCell:
-			return true
-		}
+	// These types render their children internally, so the walker should
+	// skip them. Checking only the immediate parent is sufficient because
+	// any non-leaf child of these types is itself in this list, and any
+	// child not in this list (Text, String, RawHTML) is a leaf node.
+	if node.Parent() == nil {
+		return false
 	}
-
+	switch node.Parent().Kind() {
+	case ast.KindCodeSpan, ast.KindAutoLink, ast.KindLink, ast.KindImage, ast.KindEmphasis, astext.KindStrikethrough, astext.KindTableCell:
+		return true
+	}
 	return false
 }
 

@@ -175,14 +175,16 @@ func (e *TableHeadElement) Finish(_ io.Writer, ctx RenderContext) error {
 // Render renders a TableCellElement.
 func (e *TableCellElement) Render(_ io.Writer, ctx RenderContext) error {
 	var b bytes.Buffer
+	var bb bytes.Buffer
 	style := ctx.options.Styles.Table.StylePrimitive
 	for _, child := range e.Children {
+		bb.Reset()
 		if r, ok := child.(StyleOverriderElementRenderer); ok {
-			if err := r.StyleOverrideRender(&b, ctx, style); err != nil {
+			if err := r.StyleOverrideRender(&bb, ctx, style); err != nil {
 				return fmt.Errorf("glamour: error rendering with style: %w", err)
 			}
+			b.WriteString(bb.String())
 		} else {
-			var bb bytes.Buffer
 			if err := child.Render(&bb, ctx); err != nil {
 				return fmt.Errorf("glamour: error rendering: %w", err)
 			}

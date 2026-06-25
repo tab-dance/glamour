@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"io"
 	"net/url"
+	"strconv"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -41,9 +42,10 @@ func (e *LinkElement) Render(w io.Writer, ctx RenderContext) error {
 }
 
 func (e *LinkElement) renderTextPart(w io.Writer, ctx RenderContext) error {
+	var b bytes.Buffer
 	for _, child := range e.Children {
+		b.Reset()
 		if r, ok := child.(StyleOverriderElementRenderer); ok { //nolint:nestif
-			var b bytes.Buffer
 			st := ctx.options.Styles.LinkText
 			if err := r.StyleOverrideRender(&b, ctx, st); err != nil {
 				return fmt.Errorf("glamour: error rendering with style: %w", err)
@@ -54,7 +56,6 @@ func (e *LinkElement) renderTextPart(w io.Writer, ctx RenderContext) error {
 				return fmt.Errorf("glamour: error writing hyperlink: %w", err)
 			}
 		} else {
-			var b bytes.Buffer
 			if err := child.Render(&b, ctx); err != nil {
 				return fmt.Errorf("glamour: error rendering: %w", err)
 			}
@@ -103,7 +104,7 @@ func makeHyperlink(link string) (string, string, bool) {
 		if _, err := io.WriteString(h, link); err != nil {
 			return "", "", false
 		}
-		urlID := fmt.Sprintf("id=%d", h.Sum32())
+		urlID := "id=" + strconv.FormatUint(uint64(h.Sum32()), 10)
 		hyperlink = ansi.SetHyperlink(link, urlID)
 		resetHyperlink = ansi.ResetHyperlink()
 	}
